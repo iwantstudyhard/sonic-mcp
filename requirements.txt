@@ -1,0 +1,5 @@
+# Kimodo 本体及其 GPU 依赖必须按 NVIDIA 官方安装文档安装。
+mcp>=1.26,<2
+numpy>=1.26
+pyzmq>=25
+scipy>=1.11

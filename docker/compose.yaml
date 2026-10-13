@@ -1,0 +1,97 @@
+name: sonic-mcp
+
+services:
+  text-encoder:
+    build:
+      context: ${KIMODO_SOURCE:?Set KIMODO_SOURCE to an external Kimodo checkout}
+      dockerfile: Dockerfile
+    image: ${KIMODO_BASE_IMAGE:-kimodo:1.0}
+    working_dir: /workspace
+    command: python -m kimodo.scripts.run_text_encoder_server
+    cpuset: "${KIMODO_CPUSET:-}"
+    volumes:
+      - ${HF_CACHE_DIR:-${HOME}/.cache/huggingface}:/workspace/.cache/huggingface
+    ports:
+      - "${TEXT_ENCODER_PORT:-9550}:9550"
+    environment:
+      HF_HOME: /workspace/.cache/huggingface
+      HOST_USER: ${USER:-user}
+      NVIDIA_VISIBLE_DEVICES: ${TEXT_ENCODER_GPU:-0}
+      CUDA_VISIBLE_DEVICES: "0"
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,host.docker.internal,text-encoder
+      no_proxy: localhost,127.0.0.1,host.docker.internal,text-encoder
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    shm_size: 16gb
+    ipc: host
+    healthcheck:
+      test: [CMD, curl, -fsS, "http://localhost:9550/"]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+      start_period: 60s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${TEXT_ENCODER_GPU:-0}"]
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  kimodo-mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mcp
+      args:
+        KIMODO_BASE_IMAGE: ${KIMODO_BASE_IMAGE:-kimodo:1.0}
+    image: ${KIMODO_MCP_IMAGE:-kimodo-sonic-mcp:local}
+    working_dir: /workspace/mcp
+    command: python3 run_kimodo_sonic_mcp.py
+    cpuset: "${KIMODO_CPUSET:-}"
+    volumes:
+      - ${HF_CACHE_DIR:-${HOME}/.cache/huggingface}:/workspace/.cache/huggingface
+      - ${KIMODO_SOURCE:?Set KIMODO_SOURCE}/checkpoints:/workspace/checkpoints:ro
+      - ../runtime/kimodo_outputs:/workspace/mcp/kimodo_outputs
+    ports:
+      - "${KIMODO_MCP_PORT:-8000}:8000"
+      - "${SONIC_ZMQ_PORT:-5556}:5556"
+    environment:
+      TEXT_ENCODER_URL: http://text-encoder:9550/
+      HF_HOME: /workspace/.cache/huggingface
+      HOST_USER: ${USER:-user}
+      KIMODO_MCP_HOST: 0.0.0.0
+      KIMODO_MCP_PORT: "8000"
+      KIMODO_MCP_PUBLIC_URL: ${KIMODO_MCP_PUBLIC_URL:-http://127.0.0.1:8000}
+      KIMODO_MCP_TOKEN: ${KIMODO_MCP_TOKEN:-}
+      KIMODO_MODEL: ${KIMODO_MODEL:-Kimodo-SMPLX-RP-v1}
+      KIMODO_DEVICE: ${KIMODO_DEVICE:-cuda}
+      KIMODO_SOURCE_FPS: ${KIMODO_SOURCE_FPS:-30}
+      KIMODO_MAX_DURATION: ${KIMODO_MAX_DURATION:-30}
+      KIMODO_MAX_DENOISING_STEPS: ${KIMODO_MAX_DENOISING_STEPS:-200}
+      KIMODO_OUTPUT_ROOT: /workspace/mcp/kimodo_outputs
+      SONIC_PUBLISHER_SCRIPT: /workspace/mcp/publish_g1_smpl_data.py
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,host.docker.internal,text-encoder
+      no_proxy: localhost,127.0.0.1,host.docker.internal,text-encoder
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    shm_size: 16gb
+    ipc: host
+    depends_on:
+      text-encoder:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped

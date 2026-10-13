@@ -1,0 +1,47 @@
+# Local credentials and deployment settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+token
+
+# Runtime data, models and downloads
+runtime/*
+!runtime/README.md
+kimodo_outputs/
+checkpoints/
+models/
+.cache/
+*.npz
+*.npy
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.csv
+*.log
+
+# Python and editor artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.DS_Store
+.idea/
+.vscode/
+
+# Release packages and local archives
+dist/
+build/
+archives/
+backups/
+deployment-backup-*/
+*.zip
+*.tar
+*.tar.gz

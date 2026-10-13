@@ -1,0 +1,11 @@
+ARG KIMODO_BASE_IMAGE=kimodo:1.0
+FROM ${KIMODO_BASE_IMAGE}
+
+WORKDIR /workspace/mcp
+COPY requirements-validated.txt /tmp/requirements-mcp.txt
+RUN python3 -m pip install --no-cache-dir -r /tmp/requirements-mcp.txt
+RUN python3 -c "import kimodo; from kimodo import load_model; print('Kimodo import OK')"
+
+COPY . /workspace/mcp
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+CMD ["python3", "run_kimodo_sonic_mcp.py"]

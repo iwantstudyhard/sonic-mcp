@@ -1,0 +1,6 @@
+# Direct dependency versions verified in the current server environment.
+# Kimodo and its GPU/text-encoder dependencies are installed separately.
+mcp==1.30.0
+numpy==1.26.4
+pyzmq==26.2.0
+scipy==1.15.3
